@@ -35,8 +35,10 @@ public class LoginService {
 	/**
 	 * 开始登陆
 	 * 
-	 * @param username 用户名
-	 * @param password 密码
+	 * @param username
+	 *            用户名
+	 * @param password
+	 *            密码
 	 * @return
 	 * @throws Exception
 	 */
@@ -75,9 +77,12 @@ public class LoginService {
 	/**
 	 * 验证登陆
 	 * 
-	 * @param account    账号信息
-	 * @param codeString 验证ID
-	 * @param form       表单
+	 * @param account
+	 *            账号信息
+	 * @param codeString
+	 *            验证ID
+	 * @param form
+	 *            表单
 	 * @throws Exception
 	 */
 	private boolean verifyLogin(Account account, String codeString, Map<String, Object> form) throws Exception {
@@ -113,19 +118,18 @@ public class LoginService {
 	/**
 	 * 登陆
 	 * 
-	 * @param account 账号信息
-	 * @param form    表单信息
+	 * @param account
+	 *            账号信息
+	 * @param form
+	 *            表单信息
 	 * @throws Exception
 	 */
 	private boolean login(Account account, Map<String, Object> form) throws Exception {
-		Map<String, String> headers = getLoginHeaders();
-		String resp = account.getHttpUtil().post(Constant.BAIDU_PAN_LOGIN_URL, form, headers);
-
-		// 结果授权
-		resp = resp.substring(resp.indexOf("err_no="), resp.indexOf("\"+accounts"));
-		account.getHttpUtil().getString(Constant.BAIDU_PAN_PASS_V3 + "?" + resp + "&accounts=");
+		// 请求登陆
+		String resp = account.getHttpUtil().post(Constant.BAIDU_PAN_LOGIN_URL, form);
 
 		// 错误码判断
+		resp = resp.substring(resp.indexOf("err_no="), resp.indexOf("\"+accounts"));
 		Map<String, String> respParams = HttpUtil.getURLParams(resp);
 		String errorCode = respParams.get("err_no");
 		if (errorCode.equals("0")) {
@@ -162,7 +166,8 @@ public class LoginService {
 	/**
 	 * 初始token
 	 * 
-	 * @param account 账号信息
+	 * @param account
+	 *            账号信息
 	 * @throws IOException
 	 */
 	private void initToken(Account account) throws IOException {
@@ -176,7 +181,8 @@ public class LoginService {
 	/**
 	 * 初始化加密信息
 	 * 
-	 * @param account 账号信息
+	 * @param account
+	 *            账号信息
 	 * @throws Exception
 	 */
 	private void initRsaKey(Account account) throws Exception {
@@ -196,7 +202,8 @@ public class LoginService {
 	/**
 	 * 获取登陆信息
 	 * 
-	 * @param account 账号信息
+	 * @param account
+	 *            账号信息
 	 * @return
 	 */
 	private Map<String, Object> getLoginForm(Account account) {
@@ -244,24 +251,10 @@ public class LoginService {
 	}
 
 	/**
-	 * 获取登陆头部信息
-	 * 
-	 * @return
-	 */
-	private Map<String, String> getLoginHeaders() {
-		Map<String, String> headers = new HashMap<>();
-		headers.put("Origin", "https://pan.baidu.com");
-		headers.put("Referer", "https://pan.baidu.com/");
-		headers.put("Accept", "*/*");
-		headers.put("Connection", "keep-alive");
-		headers.put("Host", "passport.baidu.com");
-		return headers;
-	}
-
-	/**
 	 * 下载验证码
 	 * 
-	 * @param codeString 验证码ID
+	 * @param codeString
+	 *            验证码ID
 	 * @throws IOException
 	 */
 	public void downloadVerifyCodeImage(Account account, String codeString) throws IOException {
