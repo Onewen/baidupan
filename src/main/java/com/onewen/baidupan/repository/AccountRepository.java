@@ -4,7 +4,6 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileWriter;
 import java.io.IOException;
-import java.util.HashMap;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -74,7 +73,8 @@ public class AccountRepository {
 	/**
 	 * 保存账号信息
 	 * 
-	 * @param account 账号信息
+	 * @param account
+	 *            账号信息
 	 */
 	public void saveAccount(Account account) {
 		this.account = account;
@@ -95,15 +95,6 @@ public class AccountRepository {
 				}
 		}
 
-	}
-
-	public static void main(String[] args) {
-		Account account = Account.build("asss", "123", "456");
-		account.setCookieInfos(new HashMap<>());
-		account.setEncriptPass("eeeiwi");
-		new AccountRepository().saveAccount(account);
-		Account account2 = new AccountRepository().getAccount();
-		System.out.println(account2);
 	}
 
 }
