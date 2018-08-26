@@ -27,6 +27,8 @@ public class HttpUtil {
 
 	public static final MediaType JSON_MEDIA_TYPE = MediaType.parse("application/json; charset=utf-8");
 
+	private static final Map<String, Headers> HOST_HEADERS = new HashMap<>();
+
 	private final OkHttpClient httpClient;
 
 	private final CookieStore cookieStore;
@@ -51,8 +53,10 @@ public class HttpUtil {
 	/**
 	 * 发送GET请求
 	 * 
-	 * @param url     地址
-	 * @param headers 头信息
+	 * @param url
+	 *            地址
+	 * @param headers
+	 *            头信息
 	 * @return response
 	 * @throws IOException
 	 */
@@ -60,6 +64,11 @@ public class HttpUtil {
 		Request.Builder reqBuilder = new Request.Builder();
 		if (headers != null && !headers.isEmpty())
 			reqBuilder.headers(Headers.of(headers));
+		if (headers == null) {
+			String host = HttpUrl.parse(url).host();
+			if (HOST_HEADERS.containsKey(host))
+				reqBuilder.headers(HOST_HEADERS.get(host));
+		}
 		Request request = reqBuilder.url(url).build();
 		Response response = httpClient.newCall(request).execute();
 		return response;
@@ -68,7 +77,8 @@ public class HttpUtil {
 	/**
 	 * 发送GET请求
 	 * 
-	 * @param url 地址
+	 * @param url
+	 *            地址
 	 * @return response
 	 * @throws IOException
 	 */
@@ -79,8 +89,10 @@ public class HttpUtil {
 	/**
 	 * 发送GET请求
 	 * 
-	 * @param url     地址
-	 * @param headers 头信息
+	 * @param url
+	 *            地址
+	 * @param headers
+	 *            头信息
 	 * @return string
 	 * @throws IOException
 	 */
@@ -91,7 +103,8 @@ public class HttpUtil {
 	/**
 	 * 发送GET请求
 	 * 
-	 * @param url 目标地址
+	 * @param url
+	 *            目标地址
 	 * @return
 	 * @throws IOException
 	 */
@@ -102,9 +115,12 @@ public class HttpUtil {
 	/**
 	 * 发送POST请求
 	 * 
-	 * @param url     地址
-	 * @param json    数据
-	 * @param headers 数据头
+	 * @param url
+	 *            地址
+	 * @param json
+	 *            数据
+	 * @param headers
+	 *            数据头
 	 * @return
 	 * @throws IOException
 	 */
@@ -113,6 +129,11 @@ public class HttpUtil {
 		Request.Builder reqBuilder = new Request.Builder();
 		if (headers != null && !headers.isEmpty())
 			reqBuilder.headers(Headers.of(headers));
+		if (headers == null) {
+			String host = HttpUrl.parse(url).host();
+			if (HOST_HEADERS.containsKey(host))
+				reqBuilder.headers(HOST_HEADERS.get(host));
+		}
 		Request request = reqBuilder.url(url).post(body).build();
 		Response response = httpClient.newCall(request).execute();
 		return response.body().string();
@@ -121,8 +142,10 @@ public class HttpUtil {
 	/**
 	 * 发送POST请求
 	 * 
-	 * @param url  地址
-	 * @param json 数据
+	 * @param url
+	 *            地址
+	 * @param json
+	 *            数据
 	 * @return
 	 * @throws IOException
 	 */
@@ -133,9 +156,12 @@ public class HttpUtil {
 	/**
 	 * post 方法
 	 * 
-	 * @param url     目标地址
-	 * @param form    表单数据
-	 * @param headers 数据头
+	 * @param url
+	 *            目标地址
+	 * @param form
+	 *            表单数据
+	 * @param headers
+	 *            数据头
 	 * @return
 	 * @throws IOException
 	 */
@@ -148,6 +174,11 @@ public class HttpUtil {
 		Request.Builder reqBuilder = new Request.Builder();
 		if (headers != null && !headers.isEmpty())
 			reqBuilder.headers(Headers.of(headers));
+		if (headers == null) {
+			String host = HttpUrl.parse(url).host();
+			if (HOST_HEADERS.containsKey(host))
+				reqBuilder.headers(HOST_HEADERS.get(host));
+		}
 		Request request = reqBuilder.url(url).post(body).build();
 		Response response = httpClient.newCall(request).execute();
 		return response.body().string();
@@ -156,9 +187,12 @@ public class HttpUtil {
 	/**
 	 * post 方法
 	 * 
-	 * @param url     目标地址
-	 * @param form    表单数据
-	 * @param headers 数据头
+	 * @param url
+	 *            目标地址
+	 * @param form
+	 *            表单数据
+	 * @param headers
+	 *            数据头
 	 * @return
 	 * @throws IOException
 	 */
@@ -195,6 +229,30 @@ public class HttpUtil {
 
 		}
 		return params;
+	}
+
+	/**
+	 * 请求头部信息
+	 * 
+	 * @param url
+	 *            地址
+	 * @param headers
+	 *            头部信息
+	 */
+	public static void addHostHeaders(String url, Map<String, String> headers) {
+		addHostHeaders(HttpUrl.parse(url), headers);
+	}
+
+	/**
+	 * 请求头部信息
+	 * 
+	 * @param url
+	 *            地址
+	 * @param headers
+	 *            头部信息
+	 */
+	public static void addHostHeaders(HttpUrl httpUrl, Map<String, String> headers) {
+		HOST_HEADERS.put(httpUrl.host(), Headers.of(headers));
 	}
 
 }

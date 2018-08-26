@@ -9,6 +9,7 @@ import com.onewen.baidupan.model.Account;
 import com.onewen.baidupan.model.PanFile;
 import com.onewen.baidupan.service.BaiduPanService;
 import com.onewen.baidupan.service.LoginService;
+import com.onewen.baidupan.util.LoadConfigUtil;
 
 /**
  * 百度云盘
@@ -21,6 +22,10 @@ public class BaiduPan {
 	private static final Logger LOGGER = LoggerFactory.getLogger(BaiduPan.class);
 
 	public static void main(String[] args) throws Exception {
+		// 加载配置文件
+		LoadConfigUtil.loadConfig("config", "com.onewen.baidupan.config");
+		
+		// 登陆
 		LoginService loginService = new LoginService();
 		BaiduPanService baiduPanService = new BaiduPanService();
 		Account account = loginService.startLogin("username", "password");
