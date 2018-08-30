@@ -16,9 +16,19 @@ public final class Constant {
 	public final static String BAIDU_VERIFY_CODE_URL = "https://passport.baidu.com/v2/?checkvcode&token=%s&tpl=netdisk&subpro=netdisk_web&apiver=v3&tt=%s&verifycode=%s&loginversion=v4&codestring=%s&traceid=3FA03001&callback=%s";
 	public final static String BAIDU_VERIFY_CODE_IMG_URL = "https://passport.baidu.com/cgi-bin/genimage?%s";
 	public final static String BAIDU_PAN_PASS_V3 = "https://pan.baidu.com/res/static/thirdparty/pass_v3_jump.html";
-	public final static String BAIDU_USER_INFO_URL = "http://tieba.baidu.com/f/user/json_userinfo";
+
+	public final static String PAN_API_LIST_FILE = "https://pan.baidu.com/api/list";
+	public final static String PAN_API_CREATE_FILE = "https://pan.baidu.com/api/create";
+	public final static String PAN_API_FILE_MANAGER = "https://pan.baidu.com/api/filemanager";
+	public final static String PAN_API_PRECREATE_FILE = "https://pan.baidu.com/api/precreate";
+	public final static String PAN_API_RAPID_UPLOAD_FILE = "https://pan.baidu.com/api/rapidupload";
+	public final static String PAN_API_SUPER_FILE = "https://c3.pcs.baidu.com/rest/2.0/pcs/superfile2";
 	
-	public final static String PAN_API_LIST_FILE = "https://pan.baidu.com/api/list?dir=%s";
+	public final static long FILE_SIZE_LIMIT = 4294967296L;
+	public final static long FILE_SIZE_MAX = 21474836480L;
+	public final static long FILE_SIZE_MID = 10737418240L;
+	public final static int FILE_CHUNK_SIZE = 4194304;
+	public final static int SLICE_FIRST_SIZE = 262144;
 
 	/**
 	 * 获取GID
@@ -83,15 +93,6 @@ public final class Constant {
 	 */
 	public static String getVerifyCodeImgUrl(String codeString) {
 		return String.format(BAIDU_VERIFY_CODE_IMG_URL, codeString);
-	}
-	
-	/**
-	 * 获取文件列表地址
-	 * @param dir 目录
-	 * @return
-	 */
-	public static String getListFileUrl(String dir) {
-		return String.format(PAN_API_LIST_FILE, dir);
 	}
 
 }

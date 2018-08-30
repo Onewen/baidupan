@@ -15,7 +15,7 @@ public class PanFile {
 	private int server_ctime;
 	private boolean isdir;
 	private int local_mtime;
-	private int size;
+	private long size;
 	private int share;
 	private String md5;
 	private String path;
@@ -86,11 +86,11 @@ public class PanFile {
 		this.local_mtime = local_mtime;
 	}
 
-	public int getSize() {
+	public long getSize() {
 		return size;
 	}
 
-	public void setSize(int size) {
+	public void setSize(long size) {
 		this.size = size;
 	}
 

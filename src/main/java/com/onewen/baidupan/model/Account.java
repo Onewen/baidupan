@@ -38,12 +38,15 @@ public class Account {
 
 	// cookie数据
 	private Map<String, List<CookieInfo>> cookieInfos;
-	
+
 	// 头像ID
 	private String userPortrait;
-	
+
 	// 昵称
 	private String nickname;
+
+	// bdstoken
+	private String bdstoken;
 
 	// 访问HTTP工具
 	@JSONField(serialize = false)
@@ -139,6 +142,14 @@ public class Account {
 
 	public void setNickname(String nickname) {
 		this.nickname = nickname;
+	}
+
+	public String getBdstoken() {
+		return bdstoken;
+	}
+
+	public void setBdstoken(String bdstoken) {
+		this.bdstoken = bdstoken;
 	}
 
 }

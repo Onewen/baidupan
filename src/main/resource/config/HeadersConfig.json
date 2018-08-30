@@ -18,5 +18,18 @@
 			"Referer": "https://pan.baidu.com/",
 			"User-Agent": "Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/69.0.3486.0 Safari/537.36"
 		}
+	},
+	{
+		"url": "https://c3.pcs.baidu.com",
+		"headers": {
+			"Accept": "*/*",
+			"Access-Control-Request-Headers": "",
+			"Access-Control-Request-Method": "POST",
+			"Connection": "keep-alive",
+			"Host": "c3.pcs.baidu.com",
+			"Origin": "https://pan.baidu.com",
+			"Referer": "https://pan.baidu.com/disk/home?",
+			"User-Agent": "Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/69.0.3486.0 Safari/537.36"
+		}
 	}
 ]

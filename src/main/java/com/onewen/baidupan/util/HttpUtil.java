@@ -12,6 +12,7 @@ import okhttp3.FormBody;
 import okhttp3.Headers;
 import okhttp3.HttpUrl;
 import okhttp3.MediaType;
+import okhttp3.MultipartBody;
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
 import okhttp3.RequestBody;
@@ -53,10 +54,8 @@ public class HttpUtil {
 	/**
 	 * 发送GET请求
 	 * 
-	 * @param url
-	 *            地址
-	 * @param headers
-	 *            头信息
+	 * @param url     地址
+	 * @param headers 头信息
 	 * @return response
 	 * @throws IOException
 	 */
@@ -77,8 +76,7 @@ public class HttpUtil {
 	/**
 	 * 发送GET请求
 	 * 
-	 * @param url
-	 *            地址
+	 * @param url 地址
 	 * @return response
 	 * @throws IOException
 	 */
@@ -89,10 +87,8 @@ public class HttpUtil {
 	/**
 	 * 发送GET请求
 	 * 
-	 * @param url
-	 *            地址
-	 * @param headers
-	 *            头信息
+	 * @param url     地址
+	 * @param headers 头信息
 	 * @return string
 	 * @throws IOException
 	 */
@@ -103,8 +99,7 @@ public class HttpUtil {
 	/**
 	 * 发送GET请求
 	 * 
-	 * @param url
-	 *            目标地址
+	 * @param url 目标地址
 	 * @return
 	 * @throws IOException
 	 */
@@ -115,12 +110,9 @@ public class HttpUtil {
 	/**
 	 * 发送POST请求
 	 * 
-	 * @param url
-	 *            地址
-	 * @param json
-	 *            数据
-	 * @param headers
-	 *            数据头
+	 * @param url     地址
+	 * @param json    数据
+	 * @param headers 数据头
 	 * @return
 	 * @throws IOException
 	 */
@@ -142,10 +134,8 @@ public class HttpUtil {
 	/**
 	 * 发送POST请求
 	 * 
-	 * @param url
-	 *            地址
-	 * @param json
-	 *            数据
+	 * @param url  地址
+	 * @param json 数据
 	 * @return
 	 * @throws IOException
 	 */
@@ -156,12 +146,9 @@ public class HttpUtil {
 	/**
 	 * post 方法
 	 * 
-	 * @param url
-	 *            目标地址
-	 * @param form
-	 *            表单数据
-	 * @param headers
-	 *            数据头
+	 * @param url     目标地址
+	 * @param form    表单数据
+	 * @param headers 数据头
 	 * @return
 	 * @throws IOException
 	 */
@@ -187,17 +174,88 @@ public class HttpUtil {
 	/**
 	 * post 方法
 	 * 
-	 * @param url
-	 *            目标地址
-	 * @param form
-	 *            表单数据
-	 * @param headers
-	 *            数据头
+	 * @param url     目标地址
+	 * @param form    表单数据
+	 * @param headers 数据头
 	 * @return
 	 * @throws IOException
 	 */
 	public String post(String url, Map<String, Object> form) throws IOException {
 		return post(url, form, null);
+	}
+
+	/**
+	 * post 方法
+	 * 
+	 * @param url     目标地址
+	 * @param bytes   数据
+	 * @param headers 数据头
+	 * @return
+	 * @throws IOException
+	 */
+	public String post(String url, byte[] bytes, Map<String, String> headers) throws IOException {
+		MediaType mediaType = MediaType.parse("application/octet-stream");
+		RequestBody fileBody = RequestBody.create(mediaType, bytes);
+		RequestBody requestBody = new MultipartBody.Builder().setType(MultipartBody.FORM)
+				.addFormDataPart("file", "blob", fileBody).build();
+		Request.Builder reqBuilder = new Request.Builder();
+		if (headers != null && !headers.isEmpty())
+			reqBuilder.headers(Headers.of(headers));
+		if (headers == null) {
+			String host = HttpUrl.parse(url).host();
+			if (HOST_HEADERS.containsKey(host))
+				reqBuilder.headers(HOST_HEADERS.get(host));
+		}
+		Request request = reqBuilder.url(url).post(requestBody).build();
+		Response response = httpClient.newCall(request).execute();
+		return response.body().string();
+	}
+
+	/**
+	 * post 方法
+	 * 
+	 * @param url     目标地址
+	 * @param bytes   数据
+	 * @param headers 数据头
+	 * @return
+	 * @throws IOException
+	 */
+	public String post(String url, byte[] bytes) throws IOException {
+		return post(url, bytes, null);
+	}
+
+	/**
+	 * OPTIONS 方法
+	 * 
+	 * @param url     连接地址
+	 * @param headers 头部信息
+	 * @return
+	 * @throws IOException
+	 */
+	public String options(String url, Map<String, String> headers) throws IOException {
+		Request.Builder reqBuilder = new Request.Builder();
+		if (headers != null && !headers.isEmpty())
+			reqBuilder.headers(Headers.of(headers));
+		if (headers == null) {
+			String host = HttpUrl.parse(url).host();
+			if (HOST_HEADERS.containsKey(host))
+				reqBuilder.headers(HOST_HEADERS.get(host));
+		}
+		Request request = reqBuilder.method("OPTIONS", null).url(url).build();
+		Response response = httpClient.newCall(request).execute();
+		return response.body().string();
+	}
+
+	/**
+	 * OPTIONS 方法
+	 * 
+	 * @param url     连接地址
+	 * @param headers 头部信息
+	 * @return
+	 * @throws IOException
+	 */
+	public String options(String url) throws IOException {
+		return options(url, null);
 	}
 
 	/**
@@ -234,10 +292,8 @@ public class HttpUtil {
 	/**
 	 * 请求头部信息
 	 * 
-	 * @param url
-	 *            地址
-	 * @param headers
-	 *            头部信息
+	 * @param url     地址
+	 * @param headers 头部信息
 	 */
 	public static void addHostHeaders(String url, Map<String, String> headers) {
 		addHostHeaders(HttpUrl.parse(url), headers);
@@ -246,10 +302,8 @@ public class HttpUtil {
 	/**
 	 * 请求头部信息
 	 * 
-	 * @param url
-	 *            地址
-	 * @param headers
-	 *            头部信息
+	 * @param url     地址
+	 * @param headers 头部信息
 	 */
 	public static void addHostHeaders(HttpUrl httpUrl, Map<String, String> headers) {
 		HOST_HEADERS.put(httpUrl.host(), Headers.of(headers));

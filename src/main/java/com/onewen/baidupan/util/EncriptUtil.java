@@ -1,7 +1,7 @@
 package com.onewen.baidupan.util;
 
+import java.io.InputStream;
 import java.security.KeyFactory;
-import java.security.MessageDigest;
 import java.security.PrivateKey;
 import java.security.PublicKey;
 import java.security.spec.PKCS8EncodedKeySpec;
@@ -9,6 +9,8 @@ import java.security.spec.X509EncodedKeySpec;
 import java.util.Base64;
 
 import javax.crypto.Cipher;
+
+import org.apache.commons.codec.digest.DigestUtils;
 
 /**
  * 加密工具
@@ -23,13 +25,32 @@ public class EncriptUtil {
 	 * 
 	 * @param data
 	 * @return
-	 * @throws Exception 
+	 * @throws Exception
 	 */
 	public static String encriptByMd5(String data) throws Exception {
-		// 确定计算方法
-		MessageDigest md5 = MessageDigest.getInstance("MD5");
-		// 加密后的字符串
-		return bytesToHexString(md5.digest(data.getBytes("utf-8")));
+		return DigestUtils.md5Hex(data);
+	}
+
+	/**
+	 * 通过MD5数据加密
+	 * 
+	 * @param data
+	 * @return
+	 * @throws Exception
+	 */
+	public static String encriptByMd5(InputStream is) throws Exception {
+		return DigestUtils.md5Hex(is);
+	}
+
+	/**
+	 * 通过MD5数据加密
+	 * 
+	 * @param bytes
+	 * @return
+	 * @throws Exception
+	 */
+	public static String encriptByMd5(byte[] bytes) throws Exception {
+		return DigestUtils.md5Hex(bytes);
 	}
 
 	/**

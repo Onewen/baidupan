@@ -35,10 +35,8 @@ public class LoginService {
 	/**
 	 * 开始登陆
 	 * 
-	 * @param username
-	 *            用户名
-	 * @param password
-	 *            密码
+	 * @param username 用户名
+	 * @param password 密码
 	 * @return
 	 * @throws Exception
 	 */
@@ -77,12 +75,9 @@ public class LoginService {
 	/**
 	 * 验证登陆
 	 * 
-	 * @param account
-	 *            账号信息
-	 * @param codeString
-	 *            验证ID
-	 * @param form
-	 *            表单
+	 * @param account    账号信息
+	 * @param codeString 验证ID
+	 * @param form       表单
 	 * @throws Exception
 	 */
 	private boolean verifyLogin(Account account, String codeString, Map<String, Object> form) throws Exception {
@@ -118,10 +113,8 @@ public class LoginService {
 	/**
 	 * 登陆
 	 * 
-	 * @param account
-	 *            账号信息
-	 * @param form
-	 *            表单信息
+	 * @param account 账号信息
+	 * @param form    表单信息
 	 * @throws Exception
 	 */
 	private boolean login(Account account, Map<String, Object> form) throws Exception {
@@ -141,17 +134,19 @@ public class LoginService {
 			if (cookie != null)
 				cookieStore.addCookie(Constant.BAIDU_PAN_HOME_URL, cookie);
 
-			// 连接授权
-			account.getHttpUtil().getString(Constant.BAIDU_PAN_HOME_URL);
-			cookieStore.addCookie(Constant.BAIDU_USER_INFO_URL, cookieStore.getCookie(Constant.BAIDU_PAN_HOME_URL));
-
 			// 获取用户数据
-			JSONObject json = JSONObject.parseObject(account.getHttpUtil().getString(Constant.BAIDU_USER_INFO_URL));
-			if (json.getInteger("no") == 0) {
-				json = json.getJSONObject("data");
-				account.setNickname(json.getString("user_name_show"));
-				account.setUserPortrait("user_portrait");
-			}
+			String json = account.getHttpUtil().getString(Constant.BAIDU_PAN_HOME_URL);
+			json = json.substring(json.indexOf("context="), json.indexOf("require("));
+			json = json.substring(json.indexOf("{"), json.lastIndexOf("};") + 1);
+			JSONObject jsonObject = JSONObject.parseObject(json);
+			account.setNickname(jsonObject.getString("username"));
+			account.setUserPortrait(jsonObject.getString("photo"));
+			account.setBdstoken(jsonObject.getString("bdstoken"));
+
+			// 连接授权
+			cookieStore.addCookie(Constant.PAN_API_SUPER_FILE, cookieStore.getCookie(Constant.BAIDU_PAN_HOME_URL));
+
+			// 保存数据
 			AccountRepository.getInstance().saveAccount(account);
 			log.info("账号 [" + account.getNickname() + "] 登陆成功");
 			return true;
@@ -166,8 +161,7 @@ public class LoginService {
 	/**
 	 * 初始token
 	 * 
-	 * @param account
-	 *            账号信息
+	 * @param account 账号信息
 	 * @throws IOException
 	 */
 	private void initToken(Account account) throws IOException {
@@ -181,8 +175,7 @@ public class LoginService {
 	/**
 	 * 初始化加密信息
 	 * 
-	 * @param account
-	 *            账号信息
+	 * @param account 账号信息
 	 * @throws Exception
 	 */
 	private void initRsaKey(Account account) throws Exception {
@@ -202,8 +195,7 @@ public class LoginService {
 	/**
 	 * 获取登陆信息
 	 * 
-	 * @param account
-	 *            账号信息
+	 * @param account 账号信息
 	 * @return
 	 */
 	private Map<String, Object> getLoginForm(Account account) {
@@ -253,8 +245,7 @@ public class LoginService {
 	/**
 	 * 下载验证码
 	 * 
-	 * @param codeString
-	 *            验证码ID
+	 * @param codeString 验证码ID
 	 * @throws IOException
 	 */
 	public void downloadVerifyCodeImage(Account account, String codeString) throws IOException {
@@ -286,7 +277,7 @@ public class LoginService {
 	public boolean isLogin(Account account) throws IOException {
 		if (account == null)
 			return false;
-		String json = account.getHttpUtil().getString(Constant.getListFileUrl("/"));
+		String json = account.getHttpUtil().getString(Constant.PAN_API_LIST_FILE);
 		JSONObject jsonObject = JSONObject.parseObject(json);
 		return jsonObject.getInteger("errno") != null && jsonObject.getInteger("errno") == 0;
 	}
