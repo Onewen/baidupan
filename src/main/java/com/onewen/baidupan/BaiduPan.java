@@ -24,16 +24,18 @@ public class BaiduPan {
 	public static void main(String[] args) throws Exception {
 		// 加载配置文件
 		LoadConfigUtil.loadConfig("config", "com.onewen.baidupan.config");
-		
+
 		// 登陆
-		LoginService loginService = new LoginService();
-		BaiduPanService baiduPanService = new BaiduPanService();
-		Account account = loginService.startLogin("username", "password");
+		Account account = LoginService.getInstance().startLogin("username", "password");
 		if (account == null)
 			return;
-		List<PanFile> panFiles = baiduPanService.listFile(account, "/");
+		List<PanFile> panFiles = BaiduPanService.getInstance().listFile(account, "/");
 		for (PanFile panFile : panFiles) {
-			LOGGER.info(panFile.getServer_filename());
+			if(!panFile.isIsdir()) {
+				BaiduPanService.getInstance().downloadFile(account, panFile, "F:\\BaiduYunDownload");
+				LOGGER.info(panFile.getServer_filename());
+				break;
+			}
 		}
 	}
 }

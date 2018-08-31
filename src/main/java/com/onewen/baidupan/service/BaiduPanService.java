@@ -1,6 +1,7 @@
 package com.onewen.baidupan.service;
 
 import java.io.BufferedInputStream;
+import java.io.BufferedOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
@@ -346,7 +347,7 @@ public class BaiduPanService {
 	public void downloadFile(Account account, PanFile panFile, String savePath) {
 		if (panFile.isIsdir())
 			return;
-		FileOutputStream fs = null;
+		BufferedOutputStream bs = null;
 		try {
 			JSONObject json = null;
 			for (int i = 0; i < 2; i++) {
@@ -380,21 +381,22 @@ public class BaiduPanService {
 
 			// 下载文件
 			InputStream is = account.getHttpUtil().getResponse(dlink).body().byteStream();
-			byte[] bs = new byte[1024];
+			byte[] bytes = new byte[10240];
 			int n;
 			File file = new File(savePath + panFile.getPath());
 			file.getParentFile().mkdirs();
-			fs = new FileOutputStream(file);
-			while ((n = is.read(bs)) > 0) {
-				fs.write(bs, 0, n);
+			bs = new BufferedOutputStream(new FileOutputStream(file));
+			while ((n = is.read(bytes)) > 0) {
+				bs.write(bytes, 0, n);
 			}
+			bs.flush();
 			log.info("下载完成:" + file.getAbsolutePath());
 		} catch (IOException e) {
 			log.error("下载文件失败", e);
 		} finally {
-			if (fs != null)
+			if (bs != null)
 				try {
-					fs.close();
+					bs.close();
 				} catch (IOException e) {
 					log.error("关闭下载 [" + savePath + "] 文件失败");
 				}
