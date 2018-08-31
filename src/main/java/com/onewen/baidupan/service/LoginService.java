@@ -32,6 +32,14 @@ public class LoginService {
 
 	private final Logger log = LoggerFactory.getLogger(this.getClass());
 
+	private static LoginService instance;
+
+	public static LoginService getInstance() {
+		if (instance == null)
+			instance = new LoginService();
+		return instance;
+	}
+
 	/**
 	 * 开始登陆
 	 * 
@@ -135,13 +143,7 @@ public class LoginService {
 				cookieStore.addCookie(Constant.BAIDU_PAN_HOME_URL, cookie);
 
 			// 获取用户数据
-			String json = account.getHttpUtil().getString(Constant.BAIDU_PAN_HOME_URL);
-			json = json.substring(json.indexOf("context="), json.indexOf("require("));
-			json = json.substring(json.indexOf("{"), json.lastIndexOf("};") + 1);
-			JSONObject jsonObject = JSONObject.parseObject(json);
-			account.setNickname(jsonObject.getString("username"));
-			account.setUserPortrait(jsonObject.getString("photo"));
-			account.setBdstoken(jsonObject.getString("bdstoken"));
+			loadUserInfo(account);
 
 			// 连接授权
 			cookieStore.addCookie(Constant.PAN_API_SUPER_FILE, cookieStore.getCookie(Constant.BAIDU_PAN_HOME_URL));
@@ -155,6 +157,28 @@ public class LoginService {
 		} else {
 			log.info("登陆失败, 错误码 [" + errorCode + "]," + ErrorCode.getLoginErrorMsg(Integer.valueOf(errorCode)));
 			return false;
+		}
+	}
+
+	/**
+	 * 加载用户数据
+	 * 
+	 * @param account 账号信息
+	 */
+	public void loadUserInfo(Account account) {
+		try {
+			String json = account.getHttpUtil().getString(Constant.BAIDU_PAN_HOME_URL);
+			json = json.substring(json.indexOf("context="), json.indexOf("require("));
+			json = json.substring(json.indexOf("{"), json.lastIndexOf("};") + 1);
+			JSONObject jsonObject = JSONObject.parseObject(json);
+			account.setNickname(jsonObject.getString("username"));
+			account.setUserPortrait(jsonObject.getString("photo"));
+			account.setBdstoken(jsonObject.getString("bdstoken"));
+			account.setSign1(jsonObject.getString("sign1"));
+			account.setSign3(jsonObject.getString("sign3"));
+			account.setTimestamp(jsonObject.getIntValue("timestamp"));
+		} catch (IOException e) {
+			log.error("加载用户信息失败", e);
 		}
 	}
 

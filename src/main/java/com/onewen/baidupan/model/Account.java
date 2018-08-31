@@ -48,6 +48,15 @@ public class Account {
 	// bdstoken
 	private String bdstoken;
 
+	// sign1
+	private String sign1;
+
+	// sign3
+	private String sign3;
+
+	// 时间戳
+	private int timestamp;
+
 	// 访问HTTP工具
 	@JSONField(serialize = false)
 	private final HttpUtil httpUtil = new HttpUtil();
@@ -150,6 +159,30 @@ public class Account {
 
 	public void setBdstoken(String bdstoken) {
 		this.bdstoken = bdstoken;
+	}
+
+	public String getSign1() {
+		return sign1;
+	}
+
+	public void setSign1(String sign1) {
+		this.sign1 = sign1;
+	}
+
+	public String getSign3() {
+		return sign3;
+	}
+
+	public void setSign3(String sign3) {
+		this.sign3 = sign3;
+	}
+
+	public int getTimestamp() {
+		return timestamp;
+	}
+
+	public void setTimestamp(int timestamp) {
+		this.timestamp = timestamp;
 	}
 
 }

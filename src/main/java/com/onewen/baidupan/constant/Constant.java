@@ -23,6 +23,7 @@ public final class Constant {
 	public final static String PAN_API_PRECREATE_FILE = "https://pan.baidu.com/api/precreate";
 	public final static String PAN_API_RAPID_UPLOAD_FILE = "https://pan.baidu.com/api/rapidupload";
 	public final static String PAN_API_SUPER_FILE = "https://c3.pcs.baidu.com/rest/2.0/pcs/superfile2";
+	public final static String PAN_API_DOWNLOAD_FILE = "https://pan.baidu.com/api/download";
 	
 	public final static long FILE_SIZE_LIMIT = 4294967296L;
 	public final static long FILE_SIZE_MAX = 21474836480L;

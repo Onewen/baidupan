@@ -3,7 +3,9 @@ package com.onewen.baidupan.service;
 import java.io.BufferedInputStream;
 import java.io.File;
 import java.io.FileInputStream;
+import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -17,6 +19,8 @@ import com.alibaba.fastjson.JSONObject;
 import com.onewen.baidupan.constant.Constant;
 import com.onewen.baidupan.model.Account;
 import com.onewen.baidupan.model.PanFile;
+import com.onewen.baidupan.repository.AccountRepository;
+import com.onewen.baidupan.util.CookieStore;
 import com.onewen.baidupan.util.EncriptUtil;
 
 /**
@@ -28,6 +32,14 @@ import com.onewen.baidupan.util.EncriptUtil;
 public class BaiduPanService {
 
 	private final Logger log = LoggerFactory.getLogger(this.getClass());
+
+	private static BaiduPanService instance;
+
+	public static BaiduPanService getInstance() {
+		if (instance == null)
+			instance = new BaiduPanService();
+		return instance;
+	}
 
 	/**
 	 * 获取文件列表
@@ -329,7 +341,63 @@ public class BaiduPanService {
 			log.error("上传文件[" + file.getName() + "]失败", e);
 			return null;
 		}
-
 	}
 
+	public void downloadFile(Account account, PanFile panFile, String savePath) {
+		if (panFile.isIsdir())
+			return;
+		FileOutputStream fs = null;
+		try {
+			JSONObject json = null;
+			for (int i = 0; i < 2; i++) {
+				if (account.getSign1() != null && account.getSign3() != null) {
+					// 计算盐值
+					String sign = EncriptUtil.sign(account.getSign3(), account.getSign1());
+
+					// 组装链接
+					String url = Constant.PAN_API_DOWNLOAD_FILE
+							+ "?type=dlink&channel=chunlei&web=1&app_id=250528&clienttype=0" + "&bdstoken="
+							+ account.getBdstoken() + "&sign=" + sign + "&timestamp=" + account.getTimestamp()
+							+ "&fidlist=" + "[" + panFile.getFs_id() + "]";
+
+					// 请求下载文件
+					json = JSONObject.parseObject(account.getHttpUtil().getString(url));
+					if (json.getIntValue("errno") == 0)
+						break;
+				}
+				LoginService.getInstance().loadUserInfo(account);
+				AccountRepository.getInstance().saveAccount(account);
+			}
+			if (json.getIntValue("errno") != 0) {
+				log.info("下载文件失败, 错误码:" + json.getIntValue("errno"));
+				return;
+			}
+
+			// 授权
+			CookieStore cookieStore = account.getHttpUtil().getCookieStore();
+			String dlink = json.getJSONArray("dlink").getJSONObject(0).getString("dlink");
+			cookieStore.addCookie(dlink, cookieStore.getCookie(Constant.BAIDU_PAN_HOME_URL));
+
+			// 下载文件
+			InputStream is = account.getHttpUtil().getResponse(dlink).body().byteStream();
+			byte[] bs = new byte[1024];
+			int n;
+			File file = new File(savePath + panFile.getPath());
+			file.getParentFile().mkdirs();
+			fs = new FileOutputStream(file);
+			while ((n = is.read(bs)) > 0) {
+				fs.write(bs, 0, n);
+			}
+			log.info("下载完成:" + file.getAbsolutePath());
+		} catch (IOException e) {
+			log.error("下载文件失败", e);
+		} finally {
+			if (fs != null)
+				try {
+					fs.close();
+				} catch (IOException e) {
+					log.error("关闭下载 [" + savePath + "] 文件失败");
+				}
+		}
+	}
 }

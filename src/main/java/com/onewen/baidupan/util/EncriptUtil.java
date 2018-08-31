@@ -150,4 +150,73 @@ public class EncriptUtil {
 		return new String(cipher.doFinal(Base64.getDecoder().decode(content.getBytes("utf-8"))));
 	}
 
+	/**
+	 * 计算盐值
+	 * 
+	 * @param sign2
+	 * @param sign1
+	 * @return
+	 */
+	public static String sign(String sign2, String sign1) {
+		int[] a = new int[256];
+		int[] p = new int[256];
+		StringBuffer sb = new StringBuffer();
+		int v = sign2.length();
+		for (int q = 0; q < 256; q++) {
+			a[q] = sign2.charAt(q % v);
+			p[q] = q;
+		}
+		for (int u = 0, q = 0; q < 256; q++) {
+			u = (u + p[q] + a[q]) % 256;
+			int t = p[q];
+			p[q] = p[u];
+			p[u] = t;
+		}
+		for (int i = 0, u = 0, q = 0; q < sign1.length(); q++) {
+			i = (i + 1) % 256;
+			u = (u + p[i]) % 256;
+			int t = p[i];
+			p[i] = p[u];
+			p[u] = t;
+			int k = p[((p[i] + p[u]) % 256)];
+			sb.append(Character.toString((char) (sign1.charAt(q) ^ k)));
+		}
+		return base64Sign(sb.toString());
+	}
+
+	/**
+	 * 编码盐值
+	 * 
+	 * @param sign
+	 * @return
+	 */
+	private static String base64Sign(String sign) {
+		String s = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+		int e = 0, o = 0, n = 0, i = 0;
+		StringBuffer sb = new StringBuffer();
+		for (int a = sign.length(); a > e;) {
+			o = 255 & sign.charAt(e++);
+			if (e == a) {
+				sb.append(s.charAt(o >> 2));
+				sb.append(s.charAt((3 & o) << 4));
+				sb.append("==");
+				break;
+			}
+			n = sign.charAt(e++);
+			if (e == a) {
+				sb.append(s.charAt(o >> 2));
+				sb.append(s.charAt((3 & o) << 4 | (240 & n) >> 4));
+				sb.append(s.charAt((15 & n) << 2));
+				sb.append("=");
+				break;
+			}
+			i = sign.charAt(e++);
+			sb.append(s.charAt(o >> 2));
+			sb.append(s.charAt((3 & o) << 4 | (240 & n) >> 4));
+			sb.append(s.charAt((15 & n) << 2 | (192 & i) >> 6));
+			sb.append(s.charAt(63 & i));
+		}
+		return sb.toString();
+	}
+
 }
