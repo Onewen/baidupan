@@ -49,7 +49,7 @@ public class LoginService {
 	 * @throws Exception
 	 */
 	public Account startLogin(String username, String password) throws Exception {
-		Account account = AccountRepository.getInstance().getAccount();
+		Account account = AccountRepository.getInstance().getAccount(username);
 		if (account == null || !username.equals(account.getUsername()))
 			account = Account.build(Constant.getGid(), username, password);
 
