@@ -21,8 +21,10 @@ import com.onewen.baidupan.constant.Constant;
 import com.onewen.baidupan.model.Account;
 import com.onewen.baidupan.model.PanFile;
 import com.onewen.baidupan.repository.AccountRepository;
+import com.onewen.baidupan.task.UploadFileTask;
 import com.onewen.baidupan.util.CookieStore;
 import com.onewen.baidupan.util.EncriptUtil;
+import com.onewen.baidupan.util.ThreadPoolUtil;
 
 /**
  * 云盘业务
@@ -134,18 +136,17 @@ public class BaiduPanService {
 	 * 上传文件
 	 * 
 	 * @param account    账号信息
-	 * @param filePath   本地路径
+	 * @param file       待上传文件
 	 * @param serverPath 服务器路径
 	 */
-	public void uplaodFile(Account account, String filePath, String serverPath) {
-		File file = new File(filePath);
+	public void uplaodFile(Account account, File file, String serverPath) {
 		if (!file.exists()) {
-			log.error("找不到 [" + filePath + "] 文件");
+			log.error("找不到 [" + file.getName() + "] 文件");
 			return;
 		}
 
 		if (!file.isFile()) {
-			log.error("[" + filePath + "] 不是一个文件");
+			log.error("[" + file.getName() + "] 不是一个文件");
 			return;
 		}
 
@@ -154,7 +155,7 @@ public class BaiduPanService {
 		int loaclTime = (int) (System.currentTimeMillis() / 1000);
 		JSONObject precreateResult = precreateFile(account, file, serverPath, loaclTime);
 		if (precreateResult == null || precreateResult.getInteger("errno") != 0) {
-			log.info("预上传 [" + filePath + "] 文件");
+			log.info("预上传 [" + file.getName() + "] 文件");
 			return;
 		}
 
@@ -191,7 +192,7 @@ public class BaiduPanService {
 				System.out.println(rapidResult);
 			}
 		} catch (Exception e) {
-			log.error("上传 [" + filePath + "] 文件失败", e);
+			log.error("上传 [" + file.getName() + "] 文件失败", e);
 		} finally {
 			if (fs != null) {
 				try {
@@ -201,6 +202,38 @@ public class BaiduPanService {
 				}
 			}
 		}
+	}
+
+	/**
+	 * 上传文件或者目录
+	 * 
+	 * @param account    账号信息
+	 * @param filePath   本地路径
+	 * @param serverPath 服务器路径
+	 */
+	public void uplaodFileOrDir(Account account, String path, String serverPath) {
+		File file = new File(path);
+		uplaodFileOrDir(account, file, serverPath);
+	}
+
+	/**
+	 * 上传文件或者目录
+	 * 
+	 * @param account    账号信息
+	 * @param filePath   本地路径
+	 * @param serverPath 服务器路径
+	 */
+	public void uplaodFileOrDir(Account account, File file, String serverPath) {
+		if (file.isFile()) {
+			UploadFileTask task = new UploadFileTask(account, file, serverPath);
+			ThreadPoolUtil.getUploadFilePool().execute(task);
+		} else if (file.isDirectory()) {
+			serverPath = serverPath.endsWith("/") ? serverPath + file.getName() : serverPath + "/" + file.getName();
+			for (File f : file.listFiles()) {
+				uplaodFileOrDir(account, f, serverPath);
+			}
+		}
+
 	}
 
 	/**
