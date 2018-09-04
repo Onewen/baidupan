@@ -11,6 +11,8 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.LinkedBlockingQueue;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -21,10 +23,10 @@ import com.onewen.baidupan.constant.Constant;
 import com.onewen.baidupan.model.Account;
 import com.onewen.baidupan.model.PanFile;
 import com.onewen.baidupan.repository.AccountRepository;
+import com.onewen.baidupan.task.SuperFileTask;
 import com.onewen.baidupan.task.UploadFileTask;
 import com.onewen.baidupan.util.CookieStore;
 import com.onewen.baidupan.util.EncriptUtil;
-import com.onewen.baidupan.util.ThreadPoolUtil;
 
 /**
  * 云盘业务
@@ -133,6 +135,42 @@ public class BaiduPanService {
 	}
 
 	/**
+	 * 上传文件或者目录
+	 * 
+	 * @param account    账号信息
+	 * @param filePath   本地路径
+	 * @param serverPath 服务器路径
+	 */
+	public void uplaodFileOrDir(Account account, String path, String serverPath) {
+		File file = new File(path);
+		if (!file.exists()) {
+			log.error("找不到 [" + file.getName() + "] 文件或者目录");
+			return;
+		}
+		uplaodFileOrDir(account, file, serverPath);
+	}
+
+	/**
+	 * 上传文件或者目录
+	 * 
+	 * @param account    账号信息
+	 * @param filePath   本地路径
+	 * @param serverPath 服务器路径
+	 */
+	public void uplaodFileOrDir(Account account, File file, String serverPath) {
+		if (file.isFile()) {
+			UploadFileTask task = new UploadFileTask(account, file, serverPath);
+			ThreadPoolService.getInstance().getUploadFilePool().execute(task);
+		} else if (file.isDirectory()) {
+			serverPath = serverPath.endsWith("/") ? serverPath + file.getName() : serverPath + "/" + file.getName();
+			for (File f : file.listFiles()) {
+				uplaodFileOrDir(account, f, serverPath);
+			}
+		}
+
+	}
+
+	/**
 	 * 上传文件
 	 * 
 	 * @param account    账号信息
@@ -161,79 +199,19 @@ public class BaiduPanService {
 
 		// 上传文件
 		String uploadid = precreateResult.getString("uploadid");
-		FileInputStream fs = null;
-		try {
-			JSONObject rapidResult = rapidUploadFile(account, file, serverPath, loaclTime);
-			if (rapidResult == null || rapidResult.getInteger("errno") != 0) {
-				fs = new FileInputStream(file);
-				List<String> blockList = new ArrayList<>();
-				int len = (int) Math.min(file.length(), Constant.FILE_CHUNK_SIZE);
-				byte[] bytes = new byte[len];
-				int n = 0;
-				int off = 0;
-				int readAllSize = 0;
-				int partseq = 0;
-				while ((n = fs.read(bytes, off, len)) > 0) {
-					len -= n;
-					off += n;
-					readAllSize += n;
-					if (len > 0)
-						continue;
-					JSONObject superResult = superFile(account, uploadid, bytes, serverPath, partseq);
-					blockList.add(superResult.getString("md5"));
-					len = (int) Math.min(file.length() - readAllSize, Constant.FILE_CHUNK_SIZE);
-					off = 0;
-					++partseq;
-				}
-				// 上传完成
-				JSONObject uploadResult = uploadFileFinish(account, file, uploadid, serverPath, blockList, loaclTime);
-				System.out.println(uploadResult);
-			} else {
-				System.out.println(rapidResult);
-			}
-		} catch (Exception e) {
-			log.error("上传 [" + file.getName() + "] 文件失败", e);
-		} finally {
-			if (fs != null) {
-				try {
-					fs.close();
-				} catch (IOException e) {
-					log.error("关闭文件失败", e);
-				}
-			}
+		JSONObject rapidResult = rapidUploadFile(account, file, serverPath, loaclTime);
+		if (rapidResult == null || rapidResult.getInteger("errno") != 0) {
+			String blockList;
+			if (file.length() > Constant.FILE_CHUNK_SIZE)
+				blockList = multiThreadSuperFile(account, uploadid, file, serverPath);
+			else
+				blockList = signalThreadSuperFile(account, uploadid, file, serverPath);
+			// 上传完成
+			JSONObject uploadResult = uploadFileFinish(account, file, uploadid, serverPath, blockList, loaclTime);
+			System.out.println(uploadResult);
+		} else {
+			System.out.println(rapidResult);
 		}
-	}
-
-	/**
-	 * 上传文件或者目录
-	 * 
-	 * @param account    账号信息
-	 * @param filePath   本地路径
-	 * @param serverPath 服务器路径
-	 */
-	public void uplaodFileOrDir(Account account, String path, String serverPath) {
-		File file = new File(path);
-		uplaodFileOrDir(account, file, serverPath);
-	}
-
-	/**
-	 * 上传文件或者目录
-	 * 
-	 * @param account    账号信息
-	 * @param filePath   本地路径
-	 * @param serverPath 服务器路径
-	 */
-	public void uplaodFileOrDir(Account account, File file, String serverPath) {
-		if (file.isFile()) {
-			UploadFileTask task = new UploadFileTask(account, file, serverPath);
-			ThreadPoolUtil.getUploadFilePool().execute(task);
-		} else if (file.isDirectory()) {
-			serverPath = serverPath.endsWith("/") ? serverPath + file.getName() : serverPath + "/" + file.getName();
-			for (File f : file.listFiles()) {
-				uplaodFileOrDir(account, f, serverPath);
-			}
-		}
-
 	}
 
 	/**
@@ -321,6 +299,107 @@ public class BaiduPanService {
 	}
 
 	/**
+	 * 多线程发送文件
+	 * 
+	 * @param account    账号信息
+	 * @param uploadid   上传ID
+	 * @param file       文件
+	 * @param serverPath 服务器路径
+	 * @return
+	 */
+	private String multiThreadSuperFile(Account account, String uploadid, File file, String serverPath) {
+		FileInputStream fs = null;
+		try {
+			BlockingQueue<SuperFileTask> queue = new LinkedBlockingQueue<>();
+			fs = new FileInputStream(file);
+			int len = (int) Math.min(file.length(), Constant.FILE_CHUNK_SIZE);
+			byte[] bytes = new byte[len];
+			int n = 0;
+			int off = 0;
+			int readAllSize = 0;
+			int partseq = 0;
+			while (len > 0 && (n = fs.read(bytes, off, len)) > 0) {
+				len -= n;
+				off += n;
+				readAllSize += n;
+				if (len > 0)
+					continue;
+				SuperFileTask task = new SuperFileTask(account, uploadid, serverPath, bytes, partseq, queue);
+				ThreadPoolService.getInstance().getSuperFilePool().execute(task);
+				len = (int) Math.min(file.length() - readAllSize, Constant.FILE_CHUNK_SIZE);
+				bytes = new byte[len];
+				off = 0;
+				++partseq;
+			}
+			String[] blockList = new String[partseq];
+			for (int i = partseq; i > 0; i--) {
+				SuperFileTask task = queue.take();
+				blockList[task.getPartseq()] = task.getMd5();
+			}
+			return JSON.toJSONString(blockList);
+		} catch (Exception e) {
+			log.error("上传 [" + file.getName() + "] 文件失败", e);
+			return null;
+		} finally {
+			if (fs != null) {
+				try {
+					fs.close();
+				} catch (IOException e) {
+					log.error("关闭文件失败", e);
+				}
+			}
+		}
+	}
+
+	/**
+	 * 单线程发送文件
+	 * 
+	 * @param account    账号信息
+	 * @param uploadid   上传ID
+	 * @param file       文件
+	 * @param serverPath 服务器路径
+	 * @return
+	 */
+	private String signalThreadSuperFile(Account account, String uploadid, File file, String serverPath) {
+		FileInputStream fs = null;
+		try {
+			List<String> blockList = new ArrayList<>();
+			fs = new FileInputStream(file);
+			int len = (int) Math.min(file.length(), Constant.FILE_CHUNK_SIZE);
+			byte[] bytes = new byte[len];
+			int n = 0;
+			int off = 0;
+			int readAllSize = 0;
+			int partseq = 0;
+			while (len > 0 && (n = fs.read(bytes, off, len)) > -1) {
+				len -= n;
+				off += n;
+				readAllSize += n;
+				if (len > 0)
+					continue;
+				JSONObject superRsullt = superFile(account, uploadid, bytes, serverPath, partseq);
+				blockList.add(superRsullt.getString("md5"));
+				len = (int) Math.min(file.length() - readAllSize, Constant.FILE_CHUNK_SIZE);
+				bytes = new byte[len];
+				off = 0;
+				++partseq;
+			}
+			return JSON.toJSONString(blockList);
+		} catch (Exception e) {
+			log.error("上传 [" + file.getName() + "] 文件失败", e);
+			return null;
+		} finally {
+			if (fs != null) {
+				try {
+					fs.close();
+				} catch (IOException e) {
+					log.error("关闭文件失败", e);
+				}
+			}
+		}
+	}
+
+	/**
 	 * 发送文件
 	 * 
 	 * @param account    账号信息
@@ -330,7 +409,7 @@ public class BaiduPanService {
 	 * @param partseq    分片号
 	 * @return
 	 */
-	private JSONObject superFile(Account account, String uploadid, byte[] bytes, String serverPath, int partseq) {
+	public JSONObject superFile(Account account, String uploadid, byte[] bytes, String serverPath, int partseq) {
 		try {
 			String url = Constant.PAN_API_SUPER_FILE + "?method=upload&app_id=250528&channel=chunlei&clienttype=0&web=1"
 					+ "&BDUSS="
@@ -358,13 +437,13 @@ public class BaiduPanService {
 	 * @return
 	 */
 	private JSONObject uploadFileFinish(Account account, File file, String uploadid, String serverPath,
-			List<String> blockList, int loaclTime) {
+			String blockList, int loaclTime) {
 		try {
 			Map<String, Object> form = new HashMap<>();
 			form.put("path", serverPath);
 			form.put("uploadid", uploadid);
 			form.put("size", file.length());
-			form.put("block_list", JSON.toJSONString(blockList));
+			form.put("block_list", blockList);
 			form.put("local_mtime", loaclTime);
 			String url = Constant.PAN_API_CREATE_FILE
 					+ "isdir=0&rtype=1&channel=chunlei&web=1&app_id=250528&clienttype=0&bdstoken="
@@ -377,6 +456,13 @@ public class BaiduPanService {
 		}
 	}
 
+	/**
+	 * 下载文件
+	 * 
+	 * @param account  账号信息
+	 * @param panFile  文件
+	 * @param savePath 保存路径
+	 */
 	public void downloadFile(Account account, PanFile panFile, String savePath) {
 		if (panFile.isIsdir())
 			return;
@@ -435,4 +521,5 @@ public class BaiduPanService {
 				}
 		}
 	}
+
 }

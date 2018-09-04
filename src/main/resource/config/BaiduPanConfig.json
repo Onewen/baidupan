@@ -1,6 +1,8 @@
 [
 	{
 		"downloadDir": "F:\\BaiduYunDownload",
-		"uploadFileThreads": 4
+		"uploadFileThreads": 4,
+		"superFileThreads": 8,
+		"superFileQueue": 16
 	}
 ]

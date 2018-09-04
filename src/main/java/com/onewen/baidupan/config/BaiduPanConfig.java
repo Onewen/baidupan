@@ -19,6 +19,12 @@ public class BaiduPanConfig {
 	
 	// 上传线程数量
 	private int uploadFileThreads;
+	
+	// 发送文件线程数量
+	private int superFileThreads;
+	
+	// 发送文件队列数量
+	private int superFileQueue;
 
 	public String getDownloadDir() {
 		return downloadDir;
@@ -34,6 +40,22 @@ public class BaiduPanConfig {
 
 	public void setUploadFileThreads(int uploadFileThreads) {
 		this.uploadFileThreads = uploadFileThreads;
+	}
+
+	public int getSuperFileThreads() {
+		return superFileThreads;
+	}
+
+	public void setSuperFileThreads(int superFileThreads) {
+		this.superFileThreads = superFileThreads;
+	}
+
+	public int getSuperFileQueue() {
+		return superFileQueue;
+	}
+
+	public void setSuperFileQueue(int superFileQueue) {
+		this.superFileQueue = superFileQueue;
 	}
 
 	public static BaiduPanConfig getConfig() {
