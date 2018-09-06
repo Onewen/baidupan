@@ -54,19 +54,27 @@ public class BaiduPanService {
 	 * @throws IOException
 	 */
 	public List<PanFile> listFile(Account account, String dir) {
+		List<PanFile> panFiles = new ArrayList<>();
 		try {
-			String url = Constant.PAN_API_LIST_FILE + "?order=time&desc=1" + "&dir=" + dir + "&bdstoken="
-					+ account.getBdstoken();
-			String jsonText = account.getHttpUtil().getString(url);
-			JSONObject jsonObject = JSONObject.parseObject(jsonText);
-			if (jsonObject.getInteger("errno") != 0) {
-				log.info("获取文件列表失败,错误码 [" + jsonObject.getInteger("errno") + "]");
-				return null;
+			for (int i = 1; i <= 1000; i++) {
+				String url = Constant.PAN_API_LIST_FILE + "?order=time&desc=1&num=1000&page=" + i + "&dir=" + dir
+						+ "&bdstoken=" + account.getBdstoken();
+				String jsonText = account.getHttpUtil().getString(url);
+				JSONObject jsonObject = JSONObject.parseObject(jsonText);
+				if (jsonObject.getInteger("errno") != 0) {
+					log.info("获取文件列表失败,错误码 [" + jsonObject.getInteger("errno") + "]");
+					break;
+				}
+				List<PanFile> list = jsonObject.getJSONArray("list").toJavaList(PanFile.class);
+				if (list != null && !list.isEmpty())
+					panFiles.addAll(list);
+				if (list == null || list.size() < 1000)
+					break;
 			}
-			return jsonObject.getJSONArray("list").toJavaList(PanFile.class);
+			return panFiles;
 		} catch (Exception e) {
 			log.error("获取 [" + dir + "] 文件列表失败:", e);
-			return null;
+			return panFiles;
 		}
 	}
 
