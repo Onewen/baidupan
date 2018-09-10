@@ -43,6 +43,9 @@ public class ThreadPoolService {
 				}
 			});
 
+	private final ExecutorService downloadFilePool = Executors.newFixedThreadPool(4,
+			new NameThreadFactory("downloadfile"));
+
 	public ExecutorService getUploadFilePool() {
 		return uploadFilePool;
 	}
@@ -50,12 +53,18 @@ public class ThreadPoolService {
 	public ExecutorService getSuperFilePool() {
 		return superFilePool;
 	}
-	
+
+	public ExecutorService getDownloadFilePool() {
+		return downloadFilePool;
+	}
+
 	public void showndown() {
-		if(!superFilePool.isShutdown())
+		if (!superFilePool.isShutdown())
 			superFilePool.shutdown();
-		if(!uploadFilePool.isShutdown())
+		if (!uploadFilePool.isShutdown())
 			uploadFilePool.shutdown();
+		if(!downloadFilePool.isShutdown())
+			downloadFilePool.shutdown();
 	}
 
 }

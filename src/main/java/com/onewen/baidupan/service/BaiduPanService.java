@@ -25,6 +25,7 @@ import com.onewen.baidupan.model.Account;
 import com.onewen.baidupan.model.PanFile;
 import com.onewen.baidupan.repository.AccountRepository;
 import com.onewen.baidupan.task.DownLoadPackTask;
+import com.onewen.baidupan.task.DownloadFileTask;
 import com.onewen.baidupan.task.SuperFileTask;
 import com.onewen.baidupan.task.UploadFileTask;
 import com.onewen.baidupan.util.CookieStore;
@@ -537,7 +538,7 @@ public class BaiduPanService {
 			long startPos = file.length();
 			for (int i = packCount; i > 0; i--) {
 				DownLoadPackTask task = queue.take();
-				if(!task.isFinish()) {
+				if (!task.isFinish()) {
 					pool.shutdownNow();
 					log.info("下载失败:" + file.getAbsolutePath());
 					return;
@@ -560,8 +561,44 @@ public class BaiduPanService {
 				} catch (IOException e) {
 					log.error("关闭下载 [" + savePath + "] 文件失败");
 				}
-			if(pool != null && !pool.isShutdown())
+			if (pool != null && !pool.isShutdown())
 				pool.shutdown();
+		}
+	}
+
+	/**
+	 * 下载文件或者目录
+	 * 
+	 * @param account  账号信息
+	 * @param downPath 下载路径
+	 * @param savePath 保存路径
+	 */
+	public void downloadFileOrDir(Account account, String downPath, String savePath) {
+		String parentPath = downPath.equals("/") ? downPath : downPath.substring(0, downPath.lastIndexOf("/") + 1);
+		for (PanFile panFile : listFile(account, parentPath)) {
+			if (downPath.equals(parentPath))
+				downloadFileOrDir(account, panFile, savePath);
+			else if (downPath.equals(panFile.getPath())) {
+				downloadFileOrDir(account, panFile, savePath);
+			}
+		}
+	}
+
+	/**
+	 * 下载文件或者目录
+	 * 
+	 * @param account  账号信息
+	 * @param downPath 下载路径
+	 * @param savePath 保存路径
+	 */
+	public void downloadFileOrDir(Account account, PanFile panFile, String savePath) {
+		if (panFile.isIsdir()) {
+			for (PanFile file : listFile(account, panFile.getPath())) {
+				downloadFileOrDir(account, file, savePath);
+			}
+		} else {
+			DownloadFileTask task = new DownloadFileTask(account, panFile, savePath);
+			ThreadPoolService.getInstance().getDownloadFilePool().execute(task);
 		}
 	}
 

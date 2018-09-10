@@ -76,7 +76,7 @@ public class DownLoadPackTask implements Runnable {
 		InputStream is = null;
 		try {
 			Map<String, String> headers = HeadersConfig.getConfigHeaders(dlink);
-			headers.put("Range", "bytes=" + startPos + "-");
+			headers.put("Range", "bytes=" + startPos + "-" + (startPos + size - 1));
 			is = account.getHttpUtil().getResponse(dlink, headers).body().byteStream();
 			int len = size;
 			int off = 0, n = 0;
