@@ -1,17 +1,18 @@
 package com.onewen.baidupan.service;
 
 import java.io.BufferedInputStream;
-import java.io.BufferedOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
-import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.TreeMap;
 import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.concurrent.LinkedBlockingQueue;
 
 import org.slf4j.Logger;
@@ -23,10 +24,12 @@ import com.onewen.baidupan.constant.Constant;
 import com.onewen.baidupan.model.Account;
 import com.onewen.baidupan.model.PanFile;
 import com.onewen.baidupan.repository.AccountRepository;
+import com.onewen.baidupan.task.DownLoadPackTask;
 import com.onewen.baidupan.task.SuperFileTask;
 import com.onewen.baidupan.task.UploadFileTask;
 import com.onewen.baidupan.util.CookieStore;
 import com.onewen.baidupan.util.EncriptUtil;
+import com.onewen.baidupan.util.NameThreadFactory;
 
 /**
  * 云盘业务
@@ -474,7 +477,15 @@ public class BaiduPanService {
 	public void downloadFile(Account account, PanFile panFile, String savePath) {
 		if (panFile.isIsdir())
 			return;
-		BufferedOutputStream bs = null;
+		FileOutputStream fos = null;
+		File file = new File(savePath + panFile.getPath());
+		file.getParentFile().mkdirs();
+		long remainSize = panFile.getSize() - file.length();
+		if (remainSize <= 0) {
+			log.info("[" + file.getName() + "] 文件已存在,无需重复下载。");
+			return;
+		}
+		ExecutorService pool = null;
 		try {
 			JSONObject json = null;
 			for (int i = 0; i < 2; i++) {
@@ -506,27 +517,51 @@ public class BaiduPanService {
 			String dlink = json.getJSONArray("dlink").getJSONObject(0).getString("dlink");
 			cookieStore.addCookie(dlink, cookieStore.getCookie(Constant.BAIDU_PAN_HOME_URL));
 
-			// 下载文件
-			InputStream is = account.getHttpUtil().getResponse(dlink).body().byteStream();
-			byte[] bytes = new byte[10240];
-			int n;
-			File file = new File(savePath + panFile.getPath());
-			file.getParentFile().mkdirs();
-			bs = new BufferedOutputStream(new FileOutputStream(file));
-			while ((n = is.read(bytes)) > 0) {
-				bs.write(bytes, 0, n);
+			// 创建下载任务
+			BlockingQueue<DownLoadPackTask> queue = new LinkedBlockingQueue<>();
+			int threadCount = (int) Math.min(4, remainSize / Constant.FILE_CHUNK_SIZE + 1);
+			pool = Executors.newFixedThreadPool(threadCount, new NameThreadFactory("download-" + file.getName()));
+			int packCount = 0;
+			while (remainSize > 0) {
+				int dsize = (int) Math.min(remainSize, Constant.FILE_CHUNK_SIZE);
+				DownLoadPackTask task = new DownLoadPackTask(account, dlink, panFile.getSize() - remainSize, dsize,
+						queue);
+				pool.execute(task);
+				remainSize -= dsize;
+				++packCount;
 			}
-			bs.flush();
+
+			// 保存文件
+			TreeMap<Long, DownLoadPackTask> map = new TreeMap<>();
+			fos = new FileOutputStream(file, true);
+			long startPos = file.length();
+			for (int i = packCount; i > 0; i--) {
+				DownLoadPackTask task = queue.take();
+				if(!task.isFinish()) {
+					pool.shutdownNow();
+					log.info("下载失败:" + file.getAbsolutePath());
+					return;
+				}
+				map.put(task.getStartPos(), task);
+				for (DownLoadPackTask t : map.values()) {
+					if (t.getStartPos() != startPos)
+						break;
+					fos.write(t.getBytes());
+					startPos += t.getSize();
+				}
+			}
 			log.info("下载完成:" + file.getAbsolutePath());
-		} catch (IOException e) {
+		} catch (Exception e) {
 			log.error("下载文件失败", e);
 		} finally {
-			if (bs != null)
+			if (fos != null)
 				try {
-					bs.close();
+					fos.close();
 				} catch (IOException e) {
 					log.error("关闭下载 [" + savePath + "] 文件失败");
 				}
+			if(pool != null && !pool.isShutdown())
+				pool.shutdown();
 		}
 	}
 

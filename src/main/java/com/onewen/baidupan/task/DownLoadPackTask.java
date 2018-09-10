@@ -1,11 +1,13 @@
 package com.onewen.baidupan.task;
 
-import java.io.IOException;
 import java.io.InputStream;
+import java.util.Map;
+import java.util.concurrent.BlockingQueue;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.onewen.baidupan.config.HeadersConfig;
 import com.onewen.baidupan.model.Account;
 
 /**
@@ -36,11 +38,17 @@ public class DownLoadPackTask implements Runnable {
 	// 下载是否完成
 	private boolean finish;
 
-	public DownLoadPackTask(Account account, String dlink, long startPos, int size) {
+	// 下载队列
+	private BlockingQueue<DownLoadPackTask> queue;
+
+	public DownLoadPackTask(Account account, String dlink, long startPos, int size,
+			BlockingQueue<DownLoadPackTask> queue) {
+		this.account = account;
 		this.dlink = dlink;
 		this.startPos = startPos;
 		this.size = size;
 		this.finish = false;
+		this.queue = queue;
 	}
 
 	public byte[] getBytes() {
@@ -51,16 +59,25 @@ public class DownLoadPackTask implements Runnable {
 		return finish;
 	}
 
+	public long getStartPos() {
+		return startPos;
+	}
+
+	public int getSize() {
+		return size;
+	}
+
+	public BlockingQueue<DownLoadPackTask> getQueue() {
+		return queue;
+	}
+
 	@Override
 	public void run() {
 		InputStream is = null;
 		try {
-			is = account.getHttpUtil().getResponse(dlink).body().byteStream();
-			long skipSize = is.skip(startPos);
-			if (skipSize != startPos) {
-				log.error("download skip [" + skipSize + "] error");
-				return;
-			}
+			Map<String, String> headers = HeadersConfig.getConfigHeaders(dlink);
+			headers.put("Range", "bytes=" + startPos + "-");
+			is = account.getHttpUtil().getResponse(dlink, headers).body().byteStream();
 			int len = size;
 			int off = 0, n = 0;
 			bytes = new byte[len];
@@ -74,13 +91,7 @@ public class DownLoadPackTask implements Runnable {
 		} catch (Exception e) {
 			log.error("downLoad pack task error", e);
 		} finally {
-			if (is != null) {
-				try {
-					is.close();
-				} catch (IOException e) {
-					log.error("download close stream error", e);
-				}
-			}
+			queue.offer(this);
 		}
 	}
 

@@ -50,10 +50,12 @@ public class ThreadPoolService {
 	public ExecutorService getSuperFilePool() {
 		return superFilePool;
 	}
-
+	
 	public void showndown() {
-		superFilePool.shutdown();
-		uploadFilePool.shutdown();
+		if(!superFilePool.isShutdown())
+			superFilePool.shutdown();
+		if(!uploadFilePool.isShutdown())
+			uploadFilePool.shutdown();
 	}
 
 }

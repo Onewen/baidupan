@@ -21,7 +21,7 @@ public class NameThreadFactory implements ThreadFactory{
 
 	@Override
 	public Thread newThread(Runnable r) {
-		return new Thread(group, r, group.getName() + counter.getAndIncrement());
+		return new Thread(group, r, group.getName() +"-"+ counter.getAndIncrement());
 	}
 
 }
