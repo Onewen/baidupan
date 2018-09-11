@@ -5,7 +5,9 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.TimeUnit;
 
+import okhttp3.ConnectionPool;
 import okhttp3.Cookie;
 import okhttp3.CookieJar;
 import okhttp3.FormBody;
@@ -28,6 +30,8 @@ public class HttpUtil {
 
 	public static final MediaType JSON_MEDIA_TYPE = MediaType.parse("application/json; charset=utf-8");
 
+	private static final int DEFAULT_TIMEOUT = 10000;
+
 	private static final Map<String, Headers> HOST_HEADERS = new HashMap<>();
 
 	private final OkHttpClient httpClient;
@@ -36,6 +40,7 @@ public class HttpUtil {
 
 	public HttpUtil() {
 		this.cookieStore = new CookieStore();
+		ConnectionPool pool = new ConnectionPool(32, 30, TimeUnit.MINUTES);
 		httpClient = new OkHttpClient.Builder().cookieJar(new CookieJar() {
 
 			@Override
@@ -48,7 +53,9 @@ public class HttpUtil {
 				List<Cookie> cookies = cookieStore.getCookie(url);
 				return cookies != null ? cookies : new ArrayList<>();
 			}
-		}).build();
+		}).readTimeout(DEFAULT_TIMEOUT, TimeUnit.MILLISECONDS).connectTimeout(DEFAULT_TIMEOUT, TimeUnit.MILLISECONDS)
+				.writeTimeout(DEFAULT_TIMEOUT, TimeUnit.MILLISECONDS).retryOnConnectionFailure(true)
+				.connectionPool(pool).build();
 	}
 
 	/**

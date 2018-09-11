@@ -1,13 +1,12 @@
 package com.onewen.baidupan.task;
 
-import java.io.InputStream;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.BlockingQueue;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.onewen.baidupan.config.HeadersConfig;
 import com.onewen.baidupan.model.Account;
 
 /**
@@ -73,21 +72,12 @@ public class DownLoadPackTask implements Runnable {
 
 	@Override
 	public void run() {
-		InputStream is = null;
 		try {
-			Map<String, String> headers = HeadersConfig.getConfigHeaders(dlink);
+			Map<String, String> headers = new HashMap<>();
 			headers.put("Range", "bytes=" + startPos + "-" + (startPos + size - 1));
-			is = account.getHttpUtil().getResponse(dlink, headers).body().byteStream();
-			int len = size;
-			int off = 0, n = 0;
-			bytes = new byte[len];
-			while ((n = is.read(bytes, off, len)) > -1) {
-				len -= n;
-				off += n;
-				if (len <= 0)
-					break;
-			}
-			finish = true;
+			bytes = account.getHttpUtil().getResponse(dlink, headers).body().bytes();
+			if (bytes != null && bytes.length == size)
+				finish = true;
 		} catch (Exception e) {
 			log.error("downLoad pack task error", e);
 		} finally {

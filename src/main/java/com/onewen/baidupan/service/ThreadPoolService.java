@@ -43,7 +43,7 @@ public class ThreadPoolService {
 				}
 			});
 
-	private final ExecutorService downloadFilePool = Executors.newFixedThreadPool(4,
+	private final ExecutorService downloadFilePool = Executors.newFixedThreadPool(BaiduPanConfig.getConfig().getDownloadFileThreads(),
 			new NameThreadFactory("downloadfile"));
 
 	public ExecutorService getUploadFilePool() {
